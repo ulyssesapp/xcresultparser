@@ -364,7 +364,6 @@ private extension TestFailureIssueSummary {
             let textNode = XMLNode(kind: .text)
             textNode.objectValue = value
             failure.addChild(textNode)
-            failure.addAttribute(name: "message", stringValue: "short")
         }
         return failure
     }
