@@ -265,8 +265,9 @@ public struct JunitXML: XmlSerializable {
                 nodeNames: nodeNames
             )
             if thisTest.isFailed {
-                if let summary = thisTest.failureSummary(in: failureSummaries) {
-                    testcase.addChild(summary.failureXML(projectRoot: projectRoot))
+                let messages = thisTest.failureSummaries(in: failureSummaries).map { $0.failureMessage(projectRoot: projectRoot) }
+                if messages.count > 0 {
+                    testcase.addChild(TestFailureIssueSummary.failureXML(messages: messages))
                 } else {
                     testcase.addChild(failureWithoutSummary)
                 }
@@ -288,8 +289,9 @@ public struct JunitXML: XmlSerializable {
                 nodeNames: nodeNames
             )
             if thisTest.isFailed {
-                if let summary = thisTest.failureSummary(in: failureSummaries) {
-                    testcase.addChild(summary.failureXML(projectRoot: projectRoot))
+                let messages = thisTest.failureSummaries(in: failureSummaries).map { $0.failureMessage(projectRoot: projectRoot) }
+                if messages.count > 0 {
+                    testcase.addChild(TestFailureIssueSummary.failureXML(messages: messages))
                 } else {
                     testcase.addChild(failureWithoutSummary)
                 }
@@ -466,8 +468,7 @@ private extension String {
 }
 
 private extension TestFailureIssueSummary {
-    func failureXML(projectRoot: URL? = nil) -> XMLElement {
-        let failure = XMLElement(name: "failure")
+    func failureMessage(projectRoot: URL? = nil) -> String {
         var value = message
         if let loc = documentLocationInCreatingWorkspace?.url {
             if let url = URL(string: loc) {
@@ -484,18 +485,19 @@ private extension TestFailureIssueSummary {
                 value += " (\(loc))"
             }
         }
-        if !value.isEmpty {
+
+        return value
+    }
+
+    static func failureXML(messages: [String]) -> XMLElement {
+        let failure = XMLElement(name: "failure")
+        let message = messages.joined(separator: "\n")
+        if !message.isEmpty {
+            //            failure.addAttribute(name: "name", stringValue: value)
             let textNode = XMLNode(kind: .text)
-            textNode.objectValue = value
+            textNode.objectValue = message
             failure.addChild(textNode)
-            let shortMessage: String
-            if let producingTarget {
-                shortMessage = "\(issueType) in \(producingTarget): \(testCaseName)"
-            } else {
-                shortMessage = "\(issueType): \(testCaseName)"
-            }
-            failure.addAttribute(name: "message", stringValue: shortMessage)
-            failure.addAttribute(name: "type", stringValue: issueType)
+            failure.addAttribute(name: "message", stringValue: message)
         }
         return failure
     }
@@ -518,5 +520,14 @@ private extension TestFailureIssueSummary {
 private extension Bool {
     var intValue: Int {
         return self ? 1 : 0
+    }
+}
+
+private extension ActionTestMetadata {
+    func failureSummaries(in summaries: [TestFailureIssueSummary]) -> [TestFailureIssueSummary] {
+        return summaries.filter { summary in
+            return summary.testCaseName == identifier?.replacingOccurrences(of: "/", with: ".") ||
+            summary.testCaseName == "-[\(identifier?.replacingOccurrences(of: "/", with: " ") ?? "")]"
+        }
     }
 }
