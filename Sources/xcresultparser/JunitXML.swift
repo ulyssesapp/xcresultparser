@@ -493,7 +493,6 @@ private extension TestFailureIssueSummary {
         let failure = XMLElement(name: "failure")
         let message = messages.joined(separator: "\n")
         if !message.isEmpty {
-            //            failure.addAttribute(name: "name", stringValue: value)
             let textNode = XMLNode(kind: .text)
             textNode.objectValue = message
             failure.addChild(textNode)
